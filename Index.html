@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Instamart Grocery</title>
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-light: #ecfdf5;
+      --bg-gray: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-dark: #1f2937;
+      --text-muted: #6b7280;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg-gray); color: var(--text-dark); padding-bottom: 110px; user-select: none; }
+
+    /* 1. Header & Store Status */
+    header {
+      position: sticky; top: 0; z-index: 100; background: var(--card-bg);
+      padding: 12px 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .brand { font-size: 1.25rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+    .store-badge { font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; }
+    .badge-open { background: #d1fae5; color: #065f46; }
+    .badge-closed { background: #fee2e2; color: #991b1b; }
+
+    /* 2. Search & Filter Bar */
+    .search-box { position: relative; }
+    .search-box input {
+      width: 100%; padding: 10px 40px 10px 40px; border-radius: 20px;
+      border: 1px solid #e5e7eb; background: #f9fafb; outline: none; font-size: 0.95rem;
+    }
+    .search-box i.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    .search-box i.clear-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); cursor: pointer; display: none; }
+
+    /* 3. Category & Subcategory Navigation */
+    .nav-wrapper { background: var(--card-bg); border-bottom: 1px solid #e5e7eb; }
+    .categories, .subcategories { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 8px 16px; }
+    .categories::-webkit-scrollbar, .subcategories::-webkit-scrollbar { display: none; }
+    .cat-btn, .subcat-btn {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid #e5e7eb;
+      background: #f9fafb; font-size: 0.82rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s;
+    }
+    .cat-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .subcat-btn.active { background: var(--primary-dark); color: white; border-color: var(--primary-dark); }
+    .subcategories { border-top: 1px dashed #f3f4f6; background: #fafafa; display: none; }
+
+    /* 4. Delivery Progress Banner */
+    .delivery-threshold-bar {
+      background: #e0f2fe; color: #0369a1; padding: 8px 16px; font-size: 0.8rem;
+      font-weight: 600; text-align: center; border-bottom: 1px solid #bae6fd; display: flex; justify-content: center; align-items: center; gap: 6px;
+    }
+
+    /* 5. Main Product Layout & Grid */
+    main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+    .grid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+    
+    /* Product Card Component */
+    .product-card {
+      background: var(--card-bg); border-radius: var(--radius); padding: 12px;
+      box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: space-between; position: relative;
+    }
+    .discount-tag {
+      position: absolute; top: 8px; left: 8px; background: var(--danger); color: white;
+      font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; z-index: 2;
+    }
+    .wishlist-icon {
+      position: absolute; top: 8px; right: 8px; color: #d1d5db; cursor: pointer; font-size: 1.1rem; z-index: 2; transition: 0.2s;
+    }
+    .wishlist-icon.active { color: var(--danger); }
+    
+    .product-img-box { width: 100%; height: 110px; border-radius: 8px; overflow: hidden; background: #f9fafb; margin-bottom: 8px; position: relative; }
+    .product-img-box img { width: 100%; height: 100%; object-fit: contain; }
+    .out-of-stock-overlay {
+      position: absolute; inset: 0; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center;
+      color: var(--danger); font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    }
+
+    .product-title { font-size: 0.88rem; font-weight: 600; line-height: 1.25; margin-bottom: 4px; height: 2.5em; overflow: hidden; }
+    .product-unit { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; }
+    .price-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+    .product-price { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+    .product-mrp { font-size: 0.75rem; color: var(--text-muted); text-decoration: line-through; }
+    
+    .product-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+    .add-btn {
+      width: 100%; background: var(--primary); color: white; border: none; padding: 7px 0;
+      border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; text-align: center;
+    }
+    .add-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+    .qty-controls { width: 100%; display: flex; justify-content: space-between; align-items: center; background: var(--primary-light); padding: 4px 8px; border-radius: 6px; }
+    .qty-btn { background: none; border: none; color: var(--primary-dark); font-weight: 700; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
+    .qty-val { font-size: 0.85rem; font-weight: 600; }
+
+    /* 6. Bottom Floating Cart Bar */
+    .cart-bar {
+      position: fixed; bottom: 16px; left: 16px; right: 16px; max-width: 600px; margin: 0 auto;
+      background: var(--primary-dark); color: white; border-radius: var(--radius); padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+      z-index: 90; cursor: pointer; display: none;
+    }
+
+    /* 7. Modals & Overlays */
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: flex-end; z-index: 200;
+      opacity: 0; pointer-events: none; transition: 0.3s ease;
+    }
+    .modal.active { opacity: 1; pointer-events: auto; }
+    .modal-content {
+      background: white; width: 100%; max-width: 500px; border-radius: 16px 16px 0 0;
+      padding: 20px; max-height: 85vh; overflow-y: auto; transform: translateY(100%); transition: 0.3s ease;
+    }
+    .modal.active .modal-content { transform: translateY(0); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .close-btn { background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-muted); }
+
+    /* Form & Checkout Inputs */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem; outline: none;
+    }
+    .submit-btn {
+      width: 100%; background: var(--primary); color: white; border: none; padding: 12px;
+      border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 8px;
+    }
+    .submit-btn:disabled { background: #d1d5db; }
+
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+    
+    /* Quick Toast Notification */
+    .toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white;
+      padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; z-index: 300; opacity: 0; pointer-events: none; transition: 0.3s;
+    }
+    .toast.show { opacity: 1; }
+
+    footer { text-align: center; padding: 24px 16px; font-size: 0.75rem; color: var(--text-muted); }
+    footer a { color: var(--primary); text-decoration: none; margin: 0 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">Notification</div>
+
+  <!-- Header Section -->
+  <header>
+    <div class="header-top">
+      <div class="brand"><i class="fa-solid fa-basket-shopping"></i> Instamart</div>
+      <div id="storeStatusBadge" class="store-badge badge-open"><i class="fa-solid fa-circle" style="font-size:0.5rem"></i> Store Open</div>
+      <i class="fa-solid fa-file-contract" style="cursor:pointer; color:var(--text-muted); font-size:1.1rem" onclick="openLegalModal()" title="Legal Policies"></i>
+    </div>
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input type="text" id="searchInput" placeholder="Search daily essentials..." oninput="handleSearch()" />
+      <i class="fa-solid fa-xmark clear-icon" id="clearSearchBtn" onclick="clearSearch()"></i>
+    </div>
+  </header>
+
+  <!-- Category & Subcategory Navigation -->
+  <div class="nav-wrapper">
+    <div class="categories" id="categoriesContainer">
+      <button class="cat-btn active" onclick="filterCategory('All', this)">All</button>
+      <button class="cat-btn" onclick="filterFavorites(this)"><i class="fa-solid fa-heart" style="color:var(--danger)"></i> Saved</button>
+    </div>
+    <div class="subcategories" id="subcategoriesContainer"></div>
+  </div>
+
+  <!-- Delivery Free Threshold Indicator -->
+  <div class="delivery-threshold-bar" id="deliveryThresholdBar">
+    <i class="fa-solid fa-truck-fast"></i> Add <span id="thresholdAmount">₹200</span> more for FREE Delivery!
+  </div>
+
+  <!-- Main Catalog Grid -->
+  <main>
+    <div class="grid-header">
+      <span id="productCount" style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Showing products</span>
+      <select id="sortSelect" onchange="renderProducts()" style="padding:4px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #d1d5db; outline:none;">
+        <option value="default">Sort: Default</option>
+        <option value="low-high">Price: Low to High</option>
+        <option value="high-low">Price: High to Low</option>
+        <option value="discount">Highest Discount</option>
+      </select>
+    </div>
+    <div class="product-grid" id="productGrid">
+      <p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px 0;">Loading store products...</p>
+    </div>
+  </main>
+
+  <!-- Floating Cart Summary Bar -->
+  <div class="cart-bar" id="cartBar" onclick="openCartModal()">
+    <div>
+      <span id="cartCount" style="background: white; color: var(--primary-dark); padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 0.8rem; margin-right: 6px;">0</span>
+      <span style="font-weight: 600;">Items in Cart</span>
+    </div>
+    <div>
+      <span id="cartTotal" style="font-weight: 700; font-size: 1.1rem; margin-right: 8px;">₹0</span>
+      <i class="fa-solid fa-arrow-right"></i>
+    </div>
+  </div>
+
+  <!-- Cart & Checkout Modal -->
+  <div class="modal" id="cartModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size:1.1rem; font-weight:700;">Your Cart</h3>
+        <button class="close-btn" onclick="closeCartModal()">&times;</button>
+      </div>
+      
+      <div id="cartItemsList" style="margin-bottom: 12px;"></div>
+
+      <!-- Promo Code Box -->
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <input type="text" id="promoCodeInput" placeholder="Promo code (e.g. SAVE10)" style="flex:1; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:0.85rem; outline:none; text-transform:uppercase;" />
+        <button onclick="applyPromoCode()" style="background:var(--text-dark); color:white; border:none; padding:8px 14px; border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer;">Apply</button>
+      </div>
+      <div id="promoMessage" style="font-size:0.75rem; margin-top:-10px; margin-bottom:12px;"></div>
+
+      <form id="checkoutForm" onsubmit="handleCheckout(event)">
+        <h4 style="font-size:0.9rem; font-weight:600; margin-bottom: 8px;">Delivery Details</h4>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="custName" placeholder="e.g. Rahul Sharma" required />
+        </div>
+        <div class="form-group">
+          <label>Mobile Number</label>
+          <input type="tel" id="custPhone" placeholder="10-digit number" pattern="[0-9]{10}" required />
+        </div>
+        <div class="form-group">
+          <label>Complete Delivery Address</label>
+          <textarea id="custAddress" rows="2" placeholder="House no, street, landmark..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Delivery Instructions (Optional)</label>
+          <input type="text" id="custNotes" placeholder="e.g. Leave with security, don't ring bell" />
+        </div>
+        <div class="form-group">
+          <label>Payment Option</label>
+          <select id="paymentMethod">
+            <option value="Cash on Delivery / UPI">Cash / UPI on Delivery</option>
+          </select>
+        </div>
+        <button type="submit" class="submit-btn" id="submitOrderBtn">Place Order on WhatsApp</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Legal Policies Modal -->
+  <div class="modal" id="legalModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size:1.1rem; font-weight:700;">Store Policies & Info</h3>
+        <button class="close-btn" onclick="closeLegalModal()">&times;</button>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-dark); line-height: 1.5;">
+        <h4 style="margin-top:8px;">1. Privacy Policy</h4>
+        <p>We collect your name, phone number, and address strictly to fulfill daily grocery orders.</p>
+        <h4 style="margin-top:10px;">2. Refund & Return Policy</h4>
+        <p>Damaged or missing items can be reported upon delivery for an immediate cash refund or replacement.</p>
+        <h4 style="margin-top:10px;">3. Delivery Charges</h4>
+        <p>Standard delivery charge is ₹20. Orders above ₹200 qualify for FREE delivery.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 Instamart Store. Powered by Supabase Backend.</p>
+    <p style="margin-top:4px;"><a href="#" onclick="openLegalModal()">Terms & Policies</a></p>
+  </footer>
+
+  <script>
+    // -------------------------------------------------------------
+    // CONFIGURATION & CREDENTIALS
+    // -------------------------------------------------------------
+    const SUPABASE_URL = "https://gbapxuxopmtagvvdqavo.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_NY16wFejv2PuzsxZ5YN5iQ_RR81adXe";
+    const SHOP_WHATSAPP_NUMBER = "919876543210";
+    const FREE_DELIVERY_THRESHOLD = 200;
+    const STANDARD_DELIVERY_FEE = 20;
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let productsData = [];
+    let cart = JSON.parse(localStorage.getItem('instamart_cart') || '{}');
+    let favorites = JSON.parse(localStorage.getItem('instamart_favs') || '[]');
+    let activeCategory = 'All';
+    let activeSubcategory = 'All';
+    let showingFavoritesOnly = false;
+    let appliedDiscountPercent = 0;
+
+    // Audio effects for interactions
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = 600; gain.gain.value = 0.05;
+      osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+    }
+
+    // -------------------------------------------------------------
+    // STORE INITIALIZATION & REAL-TIME SYNC
+    // -------------------------------------------------------------
+    async function initStore() {
+      checkStoreOperatingHours();
+      await fetchProducts();
+      setupRealtimeSync();
+      
+      // Auto-fill customer details from last order
+      const lastCust = JSON.parse(localStorage.getItem('instamart_cust') || '{}');
+      if (lastCust.name) document.getElementById('custName').value = lastCust.name;
+      if (lastCust.phone) document.getElementById('custPhone').value = lastCust.phone;
+      if (lastCust.address) document.getElementById('custAddress').value = lastCust.address;
+    }
+
+    function checkStoreOperatingHours() {
+      const now = new Date();
+      const hour = now.getHours();
+      const badge = document.getElementById('storeStatusBadge');
+      // Store open hours: 7 AM to 11 PM
+      if (hour >= 7 && hour < 23) {
+        badge.className = "store-badge badge-open";
+        badge.innerHTML = `<i class="fa-solid fa-circle" style="font-size:0.5rem"></i> Store Open`;
+      } else {
+        badge.className = "store-badge badge-closed";
+        badge.innerHTML = `<i class="fa-solid fa-circle" style="font-size:0.5rem"></i> Opening at 7 AM`;
+      }
+    }
+
+    async function fetchProducts() {
+      try {
+        const { data, error } = await supabase.from('products').select('*');
+        if (error) throw error;
+        productsData = data || [];
+        renderCategories();
+        renderProducts();
+        updateCartBar();
+      } catch (err) {
+        console.error("Error loading products:", err);
+        document.getElementById('productGrid').innerHTML = `
+          <p style="grid-column: 1/-1; text-align: center; color: var(--danger); padding: 40px 0;">Failed to connect to store database.</p>
+        `;
+      }
+    }
+
+    // Real-time backend listening (syncs instantly when prices change in Table Editor)
+    function setupRealtimeSync() {
+      supabase.channel('public:products')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
+          fetchProducts();
+          showToast("Store catalog updated!");
+        })
+        .subscribe();
+    }
+
+    // -------------------------------------------------------------
+    // CATEGORIES & SUBCATEGORIES
+    // -------------------------------------------------------------
+    function renderCategories() {
+      const container = document.getElementById('categoriesContainer');
+      const categories = ['All', ...new Set(productsData.map(p => p.category).filter(Boolean))];
+      
+      container.innerHTML = `
+        <button class="cat-btn ${activeCategory === 'All' && !showingFavoritesOnly ? 'active' : ''}" onclick="filterCategory('All', this)">All</button>
+        <button class="cat-btn ${showingFavoritesOnly ? 'active' : ''}" onclick="filterFavorites(this)"><i class="fa-solid fa-heart" style="color:var(--danger)"></i> Saved</button>
+      ` + categories.filter(c => c !== 'All').map(cat => `
+        <button class="cat-btn ${cat === activeCategory && !showingFavoritesOnly ? 'active' : ''}" onclick="filterCategory('${cat}', this)">${cat}</button>
+      `).join('');
+    }
+
+    function filterCategory(cat, btn) {
+      showingFavoritesOnly = false;
+ 
