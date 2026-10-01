@@ -1,372 +1,384 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Instamart Grocery</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fresh Grocery Express</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background-color: #f4f5f7; padding-bottom: 70px; color: #333; transition: background 0.3s, color 0.3s; }
+
+    /* Dark Mode Theme */
+    body.dark-mode { background-color: #121212; color: #f1f1f1; }
+    body.dark-mode header, body.dark-mode .bottom-nav { background-color: #1e1e1e; color: #fff; }
+    body.dark-mode .product-card, body.dark-mode .modal-content, body.dark-mode .pills-scroll { background-color: #1e1e1e; border-color: #333; color: #fff; }
+    body.dark-mode .product-title { color: #ddd; }
+
+    /* Header & Search Bar */
+    header { background: #0c831f; color: white; padding: 12px 15px; position: sticky; top: 0; z-index: 900; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .search-box { margin-top: 8px; }
+    .search-input { width: 100%; padding: 8px 12px; border-radius: 20px; border: none; font-size: 14px; outline: none; }
+
+    /* Banner */
+    .banner-container { padding: 10px; }
+    .banner-img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; }
+
+    /* Category Pills */
+    .pills-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 10px; background: #fff; border-bottom: 1px solid #ddd; }
+    .pill { padding: 6px 14px; background: #eee; border-radius: 20px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .pill.active { background: #0c831f; color: white; }
+
+    /* Product Grid */
+    .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
+    .product-card { background: white; border-radius: 8px; padding: 10px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+    .badge-tag { position: absolute; top: 8px; left: 8px; background: #ff9800; color: white; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+    .product-img { width: 100%; height: 100px; object-fit: contain; border-radius: 6px; }
+    .product-title { font-size: 13px; margin: 6px 0 2px; height: 32px; overflow: hidden; font-weight: 600; }
+    .rating { font-size: 11px; color: #fbc02d; margin-bottom: 4px; }
+    .product-price { font-weight: bold; color: #0c831f; font-size: 14px; margin-bottom: 6px; }
+    
+    /* Quantity Selector Buttons */
+    .qty-btn-group { display: flex; align-items: center; justify-content: space-between; background: #0c831f; color: white; border-radius: 4px; overflow: hidden; }
+    .qty-btn { background: none; border: none; color: white; font-weight: bold; padding: 6px 10px; cursor: pointer; font-size: 14px; }
+    .qty-count { font-size: 13px; font-weight: bold; }
+    .add-btn { width: 100%; background: #0c831f; color: white; border: none; padding: 7px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
+
+    /* Bottom Navigation */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #fff; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #ddd; z-index: 1000; }
+    .nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; color: #666; font-size: 11px; flex: 1; cursor: pointer; position: relative; }
+    .nav-item.active { color: #0c831f; font-weight: bold; }
+    .nav-icon { font-size: 18px; margin-bottom: 2px; }
+    .badge { position: absolute; top: 2px; right: 22%; background: #e53935; color: white; font-size: 10px; font-weight: bold; border-radius: 50%; padding: 2px 6px; }
+
+    /* Modals */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; z-index: 2000; overflow-y: auto; }
+    .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 420px; border-radius: 12px; }
+    .input-field { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; }
+    .btn-green { width: 100%; background: #0c831f; color: white; padding: 11px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+
+    /* Toast Notification */
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; z-index: 3000; }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800 antialiased pb-24">
+<body>
 
-    <!-- Top Sticky Header -->
-    <header class="sticky top-0 z-40 bg-green-600 text-white shadow-md">
-        <div class="max-w-md mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-xl font-bold tracking-wide">Instamart Grocery</h1>
-                    <p class="text-xs text-green-100 flex items-center gap-1">
-                        <i class="fa-solid me-1 fa-truck-fast"></i> Delivery Available • Min. Order ₹500
-                    </p>
-                </div>
-                <div class="relative">
-                    <button id="cartIconBtn" onclick="toggleCartModal()" class="relative p-2 bg-green-700 rounded-full hover:bg-green-800 transition">
-                        <i class="fa-solid fa-cart-shopping text-lg"></i>
-                        <span id="cartBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-green-600">0</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="mt-3 relative">
-                <input type="text" id="searchInput" oninput="filterProducts()" placeholder="Search vegetables, snacks, daily essentials..." 
-                    class="w-full pl-10 pr-4 py-2 rounded-lg text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-green-300 text-sm shadow-inner">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="max-w-md mx-auto px-4 pt-4">
-
-        <!-- Category Filter -->
-        <div class="mb-4">
-            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Categories</h2>
-            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1" id="categoryContainer">
-                <button onclick="selectCategory('All')" class="cat-btn active bg-green-600 text-white px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm transition">All</button>
-                <button onclick="selectCategory('Vegetables & Fruits')" class="cat-btn bg-white text-gray-700 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm border border-gray-200 transition">Vegetables & Fruits</button>
-                <button onclick="selectCategory('Dairy & Bakery')" class="cat-btn bg-white text-gray-700 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm border border-gray-200 transition">Dairy & Bakery</button>
-                <button onclick="selectCategory('Snacks & Drinks')" class="cat-btn bg-white text-gray-700 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm border border-gray-200 transition">Snacks & Drinks</button>
-                <button onclick="selectCategory('Staples & Spices')" class="cat-btn bg-white text-gray-700 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm border border-gray-200 transition">Staples & Spices</button>
-            </div>
-        </div>
-
-        <!-- Products Grid -->
-        <div>
-            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2" id="sectionTitle">All Products</h2>
-            
-            <div id="loadingSpinner" class="flex flex-col items-center justify-center py-10">
-                <i class="fa-solid fa-spinner fa-spin text-green-600 text-3xl mb-2"></i>
-                <p class="text-xs text-gray-500">Loading products...</p>
-            </div>
-
-            <div id="productsGrid" class="grid grid-cols-2 gap-3 hidden">
-                <!-- Products will load dynamically -->
-            </div>
-        </div>
-    </main>
-
-    <!-- Bottom Floating Cart Bar -->
-    <div id="floatingCart" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30 hidden">
-        <div class="max-w-md mx-auto p-3 flex items-center justify-between">
-            <div>
-                <span id="floatCartItems" class="text-xs text-gray-500 block">0 Items</span>
-                <span id="floatCartTotal" class="text-base font-bold text-green-700">₹0</span>
-            </div>
-            <button onclick="toggleCartModal()" class="bg-green-600 text-white text-sm font-bold px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-md hover:bg-green-700 active:scale-95 transition">
-                View Cart <i class="fa-solid fa-arrow-right text-xs"></i>
-            </button>
-        </div>
+  <!-- Header with Live Search -->
+  <header>
+    <div style="font-size: 16px; text-align: center;">🥦 Fresh Grocery Express</div>
+    <div class="search-box">
+      <input type="text" id="search-input" class="search-input" placeholder="Search Atta, Milk, Oil, Snacks..." onkeyup="filterProducts()">
     </div>
+  </header>
 
-    <!-- Cart Modal Screen -->
-    <div id="cartModal" class="fixed inset-0 bg-black/50 z-50 flex justify-center items-end hidden">
-        <div class="bg-white w-full max-w-md rounded-t-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            
-            <!-- Modal Header -->
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fa-solid fa-bag-shopping text-green-600"></i> Your Shopping Cart
-                </h3>
-                <button onclick="toggleCartModal()" class="text-gray-400 hover:text-gray-600 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
+  <!-- Banner -->
+  <div class="banner-container">
+    <img class="banner-img" src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=800" alt="Banner">
+  </div>
 
-            <!-- Minimum Order Banner (Strict ₹500 Notice) -->
-            <div id="minOrderAlert" class="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-xs text-amber-800 flex items-center gap-2">
-                <i class="fa-solid fa-circle-info text-amber-600 text-sm flex-shrink-0"></i>
-                <span id="minOrderText">Minimum order value is <strong>₹500</strong>.</span>
-            </div>
+  <!-- Subcategory Filter Pills -->
+  <div class="pills-scroll">
+    <button class="pill active" onclick="filterCategory('All')">All Items</button>
+    <button class="pill" onclick="filterCategory('Atta & Flours')">Atta & Flours</button>
+    <button class="pill" onclick="filterCategory('Dairy')">Dairy & Butter</button>
+    <button class="pill" onclick="filterCategory('Oil')">Edible Oil</button>
+    <button class="pill" onclick="filterCategory('Snacks')">Snacks & Munchies</button>
+  </div>
 
-            <!-- Cart Items List -->
-            <div id="cartItemsList" class="p-4 overflow-y-auto flex-1 divide-y divide-gray-100">
-                <!-- Items populated here -->
-            </div>
+  <!-- Product Grid -->
+  <div id="product-grid" class="product-grid"></div>
 
-            <!-- Cart Footer -->
-            <div class="p-4 bg-gray-50 border-t border-gray-200">
-                <div class="space-y-1 mb-3 text-xs text-gray-600">
-                    <div class="flex justify-between">
-                        <span>Items Subtotal</span>
-                        <span id="modalSubtotal" class="font-semibold text-gray-800">₹0</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Delivery Fee</span>
-                        <span id="modalDeliveryFee" class="font-semibold text-gray-800">₹30</span>
-                    </div>
-                    <div class="flex justify-between text-sm font-bold text-gray-900 pt-2 border-t border-gray-200">
-                        <span>Grand Total</span>
-                        <span id="modalGrandTotal" class="text-green-700">₹0</span>
-                    </div>
-                </div>
-
-                <!-- Customer Details Form -->
-                <div class="space-y-2 mb-3">
-                    <input type="text" id="custName" placeholder="Your Full Name *" class="w-full text-xs p-2.5 border rounded-lg focus:ring-1 focus:ring-green-500 outline-none">
-                    <textarea id="custAddress" placeholder="Delivery Address / House No / Street *" rows="2" class="w-full text-xs p-2.5 border rounded-lg focus:ring-1 focus:ring-green-500 outline-none"></textarea>
-                </div>
-
-                <!-- Checkout Button -->
-                <button id="checkoutBtn" onclick="processCheckout()" disabled
-                    class="w-full bg-gray-400 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-md transition cursor-not-allowed">
-                    <i class="fa-brands fa-whatsapp text-lg"></i>
-                    <span id="checkoutBtnText">Order Minimum ₹500 Required</span>
-                </button>
-            </div>
+  <!-- Cart & Multi-Step Checkout Modal -->
+  <div id="checkout-modal" class="modal-overlay">
+    <div class="modal-content">
+      
+      <!-- Step 0: Cart Review & Coupon -->
+      <div id="step-cart">
+        <h3>🛒 Cart Summary</h3>
+        <div id="cart-items-list" style="margin: 12px 0; max-height: 180px; overflow-y: auto; border-bottom: 1px solid #eee; padding-bottom: 10px;"></div>
+        
+        <!-- Coupon System -->
+        <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+          <input type="text" id="coupon-code" class="input-field" placeholder="Promo Code (e.g. FIRST50)" style="margin:0; text-transform:uppercase;">
+          <button onclick="applyCoupon()" style="background:#333; color:white; border:none; padding:0 12px; border-radius:6px; font-weight:bold; cursor:pointer;">Apply</button>
         </div>
+
+        <div style="font-size: 13px; line-height: 1.6; margin-bottom: 12px; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+          <div>Subtotal: <span style="float:right;">₹<span id="summary-subtotal">0</span></span></div>
+          <div>Discount: <span style="float:right; color:#0c831f;">-₹<span id="summary-discount">0</span></span></div>
+          <div>Delivery Fee: <span style="float:right;">₹<span id="summary-delivery">15</span></span></div>
+          <hr style="margin: 6px 0; border: none; border-top: 1px solid #ddd;">
+          <div style="font-weight: bold; font-size: 15px;">Total Amount: <span style="float:right;">₹<span id="summary-total">0</span></span></div>
+        </div>
+
+        <button onclick="goToAddressStep()" class="btn-green">Proceed to Delivery Address ➔</button>
+        <button onclick="closeCheckoutModal()" style="width:100%; background:none; border:none; color:#777; margin-top:8px; cursor:pointer;">Continue Shopping</button>
+      </div>
+
+      <!-- Step 1: Address Details -->
+      <div id="step-address" style="display: none;">
+        <h3>📍 1. Delivery Address</h3>
+        <br>
+        <input type="text" id="cust-name" class="input-field" placeholder="Full Name" required>
+        <input type="tel" id="cust-phone" class="input-field" placeholder="Mobile Number" required>
+        <textarea id="cust-address" class="input-field" placeholder="Complete House / Shop Address" rows="3" required></textarea>
+        <button onclick="goToPaymentStep()" class="btn-green">Proceed to Payment ➔</button>
+      </div>
+
+      <!-- Step 2: Payment Selection -->
+      <div id="step-payment" style="display: none;">
+        <h3>💳 2. Payment Method</h3>
+        <br>
+        <label style="display: block; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px;">
+          <input type="radio" name="pay-method" value="COD" checked onclick="togglePayFields('COD')"> Cash on Delivery (COD)
+        </label>
+        <label style="display: block; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;">
+          <input type="radio" name="pay-method" value="UPI" onclick="togglePayFields('UPI')"> UPI / GPay / PhonePe
+        </label>
+
+        <div id="upi-box" style="display: none; background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+          <input type="text" id="upi-id" class="input-field" placeholder="Enter UPI ID (e.g. user@upi)" style="margin: 0;">
+        </div>
+
+        <button onclick="processOrder()" class="btn-green">Confirm & Place Order</button>
+      </div>
+
+      <!-- Step 3: OTP Verification -->
+      <div id="step-otp" style="display: none; text-align: center;">
+        <h3>🔒 Payment Verification</h3>
+        <p style="font-size: 13px; color: #666; margin: 8px 0;">Generated Security OTP Code:</p>
+        <div style="background: #e8f5e9; padding: 8px; border-radius: 6px; font-weight: bold; color: #2e7d32; margin-bottom: 12px;">
+          OTP: <span id="generated-otp">1234</span>
+        </div>
+        <input type="text" id="user-otp" maxlength="4" class="input-field" placeholder="Enter 4-Digit OTP" style="text-align: center; font-size: 18px; letter-spacing: 4px;">
+        <button onclick="verifyOTPAndComplete()" class="btn-green">Submit OTP & Pay</button>
+      </div>
+
+      <!-- Step 4: Success Screen -->
+      <div id="step-success" style="display: none; text-align: center;">
+        <div style="font-size: 45px; color: #25D366; margin-bottom: 8px;">✅</div>
+        <h2>Order Placed!</h2>
+        <p style="color: #555; margin: 6px 0;">Order ID: <strong id="order-id">#ORD-0000</strong></p>
+        <p style="font-size: 13px; color: #777; margin-bottom: 15px;">Estimated Delivery: 15 to 30 mins</p>
+        <button onclick="closeCheckoutModal()" class="btn-green">Back to Shop</button>
+      </div>
+
     </div>
+  </div>
 
-    <!-- JavaScript Logic -->
-    <script>
-        // Supabase Initialization
-        const SUPABASE_URL = "https://gbapxuxopmtagvvdqavo.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_NY16wFejv2PuzsxZ5YN5iQ_RR81adXe";
-        const WHATSAPP_NUMBER = "919000000000"; // Replace with your shop WhatsApp number
-        const MIN_ORDER_VALUE = 500;
-        const DELIVERY_FEE = 30;
+  <!-- Orders / Account Modal -->
+  <div id="account-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>👤 Account & Orders</h3>
+      <br>
+      <div style="margin-bottom: 15px;">
+        <strong>Dark Mode:</strong>
+        <button onclick="toggleDarkMode()" style="float:right; padding:4px 10px; border-radius:4px; border:1px solid #ccc; cursor:pointer;">Toggle Theme</button>
+      </div>
+      <hr style="border:none; border-top:1px solid #eee; margin:10px 0;">
+      <h4>📦 Order History</h4>
+      <div id="orders-history-list" style="margin-top:10px; max-height:220px; overflow-y:auto; font-size:12px;"></div>
+      <button onclick="closeAccountModal()" class="btn-green" style="margin-top:15px;">Close</button>
+    </div>
+  </div>
 
-        let db = null;
-        if (typeof supabase !== 'undefined') {
-            db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <!-- Toast Element -->
+  <div id="toast"></div>
+
+  <!-- Bottom Flipkart-Style Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('home')">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('categories')">
+      <span class="nav-icon">🗂️</span>
+      <span>Categories</span>
+    </button>
+    <button class="nav-item" onclick="openCheckoutModal()">
+      <span class="nav-icon">🛒</span>
+      <span>Cart</span>
+      <span id="cart-badge" class="badge">0</span>
+    </button>
+    <button class="nav-item" onclick="openAccountModal()">
+      <span class="nav-icon">👤</span>
+      <span>Account</span>
+    </button>
+  </nav>
+
+  <script>
+    // Product List with Ratings & Badges
+    const products = [
+      { id: 1, name: "Aashirvaad Whole Wheat Atta 5kg", subcategory: "Atta & Flours", price: 245, badge: "Best Seller", rating: "★ 4.8", image: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400" },
+      { id: 2, name: "Amul Pasteurised Butter 100g", subcategory: "Dairy", price: 58, badge: "Popular", rating: "★ 4.9", image: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400" },
+      { id: 3, name: "Fortune Refined Sunflower Oil 1L", subcategory: "Oil", price: 135, badge: "", rating: "★ 4.7", image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400" },
+      { id: 4, name: "Crispy Potato Chips Pack", subcategory: "Snacks", price: 20, badge: "Hot Deal", rating: "★ 4.5", image: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400" },
+      { id: 5, name: "Basmati Rice Extra Long 5kg", subcategory: "Atta & Flours", price: 480, badge: "", rating: "★ 4.6", image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400" },
+      { id: 6, name: "Fresh Cow Milk 1L", subcategory: "Dairy", price: 64, badge: "Fresh", rating: "★ 4.9", image: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400" },
+      { id: 7, name: "Chocolate Butter Biscuits", subcategory: "Snacks", price: 30, badge: "", rating: "★ 4.4", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400" },
+      { id: 8, name: "Chilled Cola Drink 750ml", subcategory: "Snacks", price: 40, badge: "", rating: "★ 4.3", image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400" }
+    ];
+
+    let cart = {}; // Object format { productId: quantity }
+    let discountAmount = 0;
+    let systemOTP = "";
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2000);
+    }
+
+    function renderProducts(items) {
+      const grid = document.getElementById('product-grid');
+      grid.innerHTML = '';
+      items.forEach(p => {
+        const qty = cart[p.id] || 0;
+        const badgeHtml = p.badge ? `<span class="badge-tag">${p.badge}</span>` : '';
+        
+        let actionBtn = `<button class="add-btn" onclick="updateQty(${p.id}, 1)">ADD</button>`;
+        if (qty > 0) {
+          actionBtn = `
+            <div class="qty-btn-group">
+              <button class="qty-btn" onclick="updateQty(${p.id}, -1)">-</button>
+              <span class="qty-count">${qty}</span>
+              <button class="qty-btn" onclick="updateQty(${p.id}, 1)">+</button>
+            </div>`;
         }
 
-        // Fallback Products (Guarantees zero loading issues)
-        const fallbackProducts = [
-            { id: 1, name: "Fresh Tomatoes", category: "Vegetables & Fruits", price: 40, unit: "1 kg", image: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=300" },
-            { id: 2, name: "Fresh Potatoes", category: "Vegetables & Fruits", price: 30, unit: "1 kg", image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300" },
-            { id: 3, name: "Amul Taaza Milk", category: "Dairy & Bakery", price: 27, unit: "500 ml", image: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=300" },
-            { id: 4, name: "Fresh Bread", category: "Dairy & Bakery", price: 40, unit: "400 g", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300" },
-            { id: 5, name: "Lays Potato Chips", category: "Snacks & Drinks", price: 20, unit: "50 g", image: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=300" },
-            { id: 6, name: "Fortune Basmati Rice", category: "Staples & Spices", price: 120, unit: "1 kg", image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300" }
-        ];
+        grid.innerHTML += `
+          <div class="product-card">
+            ${badgeHtml}
+            <img src="${p.image}" class="product-img" alt="${p.name}">
+            <div class="product-title">${p.name}</div>
+            <div class="rating">${p.rating}</div>
+            <div class="product-price">₹${p.price}</div>
+            ${actionBtn}
+          </div>`;
+      });
+    }
 
-        let allProducts = [];
-        let cart = {};
-        let currentCategory = 'All';
+    function updateQty(id, change) {
+      const current = cart[id] || 0;
+      const updated = current + change;
+      if (updated <= 0) {
+        delete cart[id];
+      } else {
+        cart[id] = updated;
+      }
+      updateCartBadge();
+      renderProducts(getCurrentFilteredProducts());
+    }
 
-        // Initialize App
-        window.addEventListener('DOMContentLoaded', () => {
-            fetchProducts();
-        });
+    function updateCartBadge() {
+      const totalCount = Object.values(cart).reduce((a, b) => a + b, 0);
+      document.getElementById('cart-badge').innerText = totalCount;
+    }
 
-        async function fetchProducts() {
-            const spinner = document.getElementById('loadingSpinner');
-            const grid = document.getElementById('productsGrid');
+    function getCurrentFilteredProducts() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const activePill = document.querySelector('.pill.active').innerText;
+      return products.filter(p => {
+        const matchesCat = (activePill === 'All Items') || (p.subcategory === activePill);
+        const matchesQuery = p.name.toLowerCase().includes(query);
+        return matchesCat && matchesQuery;
+      });
+    }
 
-            try {
-                if (db) {
-                    const { data, error } = await db.from('products').select('*');
-                    if (data && data.length > 0 && !error) {
-                        allProducts = data;
-                    } else {
-                        allProducts = fallbackProducts;
-                    }
-                } else {
-                    allProducts = fallbackProducts;
-                }
-            } catch (err) {
-                console.log('Using fallback products:', err);
-                allProducts = fallbackProducts;
-            }
+    function filterCategory(sub) {
+      document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      renderProducts(getCurrentFilteredProducts());
+    }
 
-            spinner.classList.add('hidden');
-            grid.classList.remove('hidden');
-            renderProducts(allProducts);
-        }
+    function filterProducts() {
+      renderProducts(getCurrentFilteredProducts());
+    }
 
-        function renderProducts(products) {
-            const grid = document.getElementById('productsGrid');
-            grid.innerHTML = '';
+    function calculateCartTotals() {
+      let subtotal = 0;
+      for (let id in cart) {
+        const item = products.find(p => p.id == id);
+        subtotal += item.price * cart[id];
+      }
+      const delivery = subtotal > 200 || subtotal === 0 ? 0 : 15;
+      const total = Math.max(0, subtotal - discountAmount + delivery);
+      return { subtotal, delivery, total };
+    }
 
-            if (products.length === 0) {
-                grid.innerHTML = `<div class="col-span-2 text-center py-8 text-gray-400 text-xs">No products found</div>`;
-                return;
-            }
+    function openCheckoutModal() {
+      const totalCount = Object.values(cart).reduce((a, b) => a + b, 0);
+      if (totalCount === 0) {
+        showToast("Your cart is empty!");
+        return;
+      }
+      renderCartSummary();
+      document.getElementById('checkout-modal').style.display = 'block';
+      document.getElementById('step-cart').style.display = 'block';
+      document.getElementById('step-address').style.display = 'none';
+      document.getElementById('step-payment').style.display = 'none';
+      document.getElementById('step-otp').style.display = 'none';
+      document.getElementById('step-success').style.display = 'none';
+    }
 
-            products.forEach(p => {
-                const qty = cart[p.id] ? cart[p.id].qty : 0;
-                
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex flex-col justify-between";
-                card.innerHTML = `
-                    <div>
-                        <img src="${p.image || 'https://via.placeholder.com/150'}" alt="${p.name}" class="w-full h-28 object-cover rounded-lg mb-2">
-                        <span class="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded font-medium">${p.category || 'Grocery'}</span>
-                        <h3 class="font-bold text-xs text-gray-800 mt-1 line-clamp-1">${p.name}</h3>
-                        <p class="text-[11px] text-gray-400">${p.unit || '1 unit'}</p>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <span class="font-bold text-sm text-gray-900">₹${p.price}</span>
-                        <div id="btn-container-${p.id}">
-                            ${getCartButtonHTML(p.id, qty)}
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
+    function renderCartSummary() {
+      const list = document.getElementById('cart-items-list');
+      list.innerHTML = '';
+      for (let id in cart) {
+        const item = products.find(p => p.id == id);
+        list.innerHTML += `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px;">
+            <div style="flex:1;">${item.name} (₹${item.price})</div>
+            <div style="width:70px; text-align:center;">x ${cart[id]}</div>
+            <div style="font-weight:bold;">₹${item.price * cart[id]}</div>
+          </div>`;
+      }
+      const totals = calculateCartTotals();
+      document.getElementById('summary-subtotal').innerText = totals.subtotal;
+      document.getElementById('summary-discount').innerText = discountAmount;
+      document.getElementById('summary-delivery').innerText = totals.delivery;
+      document.getElementById('summary-total').innerText = totals.total;
+    }
 
-        function getCartButtonHTML(id, qty) {
-            if (qty > 0) {
-                return `
-                    <div class="flex items-center bg-green-600 text-white rounded-lg px-2 py-1 gap-2 text-xs font-bold">
-                        <button onclick="updateQty(${id}, -1)" class="px-1 hover:text-gray-200">-</button>
-                        <span>${qty}</span>
-                        <button onclick="updateQty(${id}, 1)" class="px-1 hover:text-gray-200">+</button>
-                    </div>
-                `;
-            }
-            return `
-                <button onclick="updateQty(${id}, 1)" class="bg-green-50 text-green-700 border border-green-200 font-bold px-3 py-1 rounded-lg text-xs hover:bg-green-600 hover:text-white transition">
-                    ADD
-                </button>
-            `;
-        }
+    function applyCoupon() {
+      const code = document.getElementById('coupon-code').value.trim().toUpperCase();
+      if (code === 'FIRST50') {
+        discountAmount = 50;
+        showToast("₹50 Discount Applied!");
+      } else {
+        discountAmount = 0;
+        showToast("Invalid Coupon Code");
+      }
+      renderCartSummary();
+    }
 
-        function updateQty(id, change) {
-            const product = allProducts.find(p => p.id === id);
-            if (!product) return;
+    function goToAddressStep() {
+      document.getElementById('step-cart').style.display = 'none';
+      document.getElementById('step-address').style.display = 'block';
+    }
 
-            if (!cart[id]) {
-                cart[id] = { ...product, qty: 0 };
-            }
+    function goToPaymentStep() {
+      const name = document.getElementById('cust-name').value.trim();
+      const phone = document.getElementById('cust-phone').value.trim();
+      const address = document.getElementById('cust-address').value.trim();
+      if (!name || !phone || !address) { showToast("Please fill address fields!"); return; }
+      document.getElementById('step-address').style.display = 'none';
+      document.getElementById('step-payment').style.display = 'block';
+    }
 
-            cart[id].qty += change;
+    function togglePayFields(method) {
+      document.getElementById('upi-box').style.display = (method === 'UPI') ? 'block' : 'none';
+    }
 
-            if (cart[id].qty <= 0) {
-                delete cart[id];
-            }
-
-            // Update product card button UI
-            const btnContainer = document.getElementById(`btn-container-${id}`);
-            if (btnContainer) {
-                btnContainer.innerHTML = getCartButtonHTML(id, cart[id] ? cart[id].qty : 0);
-            }
-
-            updateCartSummary();
-        }
-
-        function updateCartSummary() {
-            const items = Object.values(cart);
-            const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
-            const subtotal = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
-
-            // Floating Bar
-            const floatCart = document.getElementById('floatingCart');
-            const cartBadge = document.getElementById('cartBadge');
-            
-            if (totalItems > 0) {
-                floatCart.classList.remove('hidden');
-                cartBadge.classList.remove('hidden');
-                cartBadge.innerText = totalItems;
-                document.getElementById('floatCartItems').innerText = `${totalItems} ${totalItems === 1 ? 'Item' : 'Items'}`;
-                document.getElementById('floatCartTotal').innerText = `₹${subtotal + (subtotal > 0 ? DELIVERY_FEE : 0)}`;
-            } else {
-                floatCart.classList.add('hidden');
-                cartBadge.classList.add('hidden');
-            }
-
-            // Modal Update
-            renderCartModalItems(items, subtotal);
-        }
-
-        function renderCartModalItems(items, subtotal) {
-            const list = document.getElementById('cartItemsList');
-            const subtotalEl = document.getElementById('modalSubtotal');
-            const grandTotalEl = document.getElementById('modalGrandTotal');
-            const checkoutBtn = document.getElementById('checkoutBtn');
-            const checkoutBtnText = document.getElementById('checkoutBtnText');
-            const minAlertText = document.getElementById('minOrderText');
-
-            list.innerHTML = '';
-
-            if (items.length === 0) {
-                list.innerHTML = `<p class="text-center text-gray-400 text-xs py-8">Your cart is empty.</p>`;
-                subtotalEl.innerText = '₹0';
-                grandTotalEl.innerText = '₹0';
-                checkoutBtn.disabled = true;
-                checkoutBtn.className = "w-full bg-gray-300 text-gray-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm cursor-not-allowed";
-                checkoutBtnText.innerText = "Cart is Empty";
-                minAlertText.innerHTML = "Minimum order value is <strong>₹500</strong>.";
-                return;
-            }
-
-            items.forEach(item => {
-                const row = document.createElement('div');
-                row.className = "py-2.5 flex items-center justify-between";
-                row.innerHTML = `
-                    <div>
-                        <h4 class="font-bold text-xs text-gray-800">${item.name}</h4>
-                        <p class="text-[10px] text-gray-400">₹${item.price} × ${item.qty}</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-xs text-gray-900">₹${item.price * item.qty}</span>
-                        <div class="flex items-center bg-gray-100 rounded px-2 py-0.5 text-xs font-bold gap-2">
-                            <button onclick="updateQty(${item.id}, -1)" class="text-gray-600">-</button>
-                            <span>${item.qty}</span>
-                            <button onclick="updateQty(${item.id}, 1)" class="text-gray-600">+</button>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(row);
-            });
-
-            const grandTotal = subtotal + DELIVERY_FEE;
-            subtotalEl.innerText = `₹${subtotal}`;
-            grandTotalEl.innerText = `₹${grandTotal}`;
-
-            // Strict Minimum ₹500 Order Lock
-            if (subtotal < MIN_ORDER_VALUE) {
-                const diff = MIN_ORDER_VALUE - subtotal;
-                minAlertText.innerHTML = `Add <strong>₹${diff}</strong> more to reach minimum order limit of <strong>₹500</strong>.`;
-                checkoutBtn.disabled = true;
-                checkoutBtn.className = "w-full bg-gray-400 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm cursor-not-allowed opacity-80";
-                checkoutBtnText.innerText = `Add ₹${diff} more to order`;
-            } else {
-                minAlertText.innerHTML = `<span class="text-green-700 font-bold"><i class="fa-solid fa-circle-check"></i> Minimum ₹500 order requirement met!</span>`;
-                checkoutBtn.disabled = false;
-                checkoutBtn.className = "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg active:scale-95 transition cursor-pointer";
-                checkoutBtnText.innerText = "Place Order on WhatsApp";
-            }
-        }
-
-        function toggleCartModal() {
-            const modal = document.getElementById('cartModal');
-            modal.classList.toggle('hidden');
-        }
-
-        function selectCategory(cat) {
-            currentCategory = cat;
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                if (btn.innerText === cat) {
-                    btn.className = "cat-btn active bg-green-600 text-white px-4 py-1.5 rounded-ful
+    function processOrder() {
+      const payMethod = document.querySelector('input[name="pay-method"]:checked').value;
+      if (payMethod === 'UPI') {
+        const upiId = document.getElementById('upi-id').value.trim();
+        if (!upiId) { showToast("Enter UPI ID"); return; }
+        systemOTP = Math.floor(1000 + Math.random() * 9000).toString();
+        document.getElementById('generated-otp').innerText = systemOTP;
+        document.getElementById('step-payment').style.display = 'none';
+        document.getElementById('step-otp').style.display = 'block';
+      } else {
+        finalizeOrder();
+     
